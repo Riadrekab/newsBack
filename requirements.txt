@@ -2,3 +2,7 @@ Django
 djangorestframework
 pillow
 whitenoise
+requests
+pandas
+sklearn
+numpy
