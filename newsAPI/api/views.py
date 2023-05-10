@@ -34,7 +34,6 @@ class getNews(APIView) :
         listAr = []
         listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
         json_response = json.dumps(listAr, indent=4)
-
         return Response(json_response)
 
  
