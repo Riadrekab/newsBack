@@ -6,3 +6,5 @@ requests
 pandas
 sklearn
 numpy
+eventregistry
+djangorestframework-simplejwt

@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError, AccessToken
+from django.core.exceptions import ValidationError
 
 
 @api_view(['GET'])
@@ -28,8 +30,12 @@ def registerUser(request):
         return Response({'detail': 'Last name is required.'}, status=400)
     if not data['username']:
         return Response({'detail': 'Username is required.'}, status=400)
-    if not validate_email(data['email']):
-        return Response({'detail': 'Invalid email address.'}, status=400)
+    if User.objects.filter(username=data['username']).exists():
+        return Response({'detail': 'Username not available.'}, status=400)
+    try:
+        validate_email(data['email'])
+    except ValidationError:
+        return Response({'detail': 'Please enter a valid email address.'}, status=400)
     if User.objects.filter(email=data['email']).exists():
         return Response({'detail': 'User with this email already exists.'}, status=400)
     if not data['password']:
@@ -69,11 +75,13 @@ def loginUser(request):
     # if the username_or_email is an email, get the user by email.
     try:
         validate_email(username_or_email)
+        if not User.objects.filter(email=username_or_email).exists():
+            return Response({'detail': 'User with this username or email does not exist.'}, status=404)
         user = User.objects.get(email=username_or_email)
-    except:
+    except ValidationError:
+        if not User.objects.filter(username=username_or_email).exists():
+            return Response({'detail': 'User with this username or email does not exist.'}, status=404)
         user = User.objects.get(username=username_or_email)
-    if not user:
-        return Response({'detail': 'User with this username or email does not exist.'}, status=400)
 
     # Check if the password is correct.
     is_valid_password = authenticate(username=user.username, password=password)
@@ -81,5 +89,10 @@ def loginUser(request):
         return Response({'detail': 'Invalid password.'}, status=401)
 
     # Login the user.
-    auth_token = user.auth_token
-    return Response({'detail': 'User was logged in', 'auth_token': auth_token})
+    refresh = RefreshToken.for_user(user)
+    access = AccessToken.for_user(user)
+    data = {
+        'refresh': str(refresh),
+        'access': str(access),
+    }
+    return Response({'detail': 'User was logged in', 'refresh': data['refresh'], 'access': data['access']})
