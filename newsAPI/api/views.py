@@ -1,13 +1,17 @@
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.contrib.auth.models import User
+from django.core.validators import validate_email
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError, AccessToken
+from django.core.exceptions import ValidationError
 from rest_framework.views import APIView
 from django.http import HttpResponse
-from rest_framework.response import Response
-
 
 from eventregistry import *
-er = EventRegistry(apiKey = '62fd2d2a-c90f-4cc1-9b72-ad5f85739368')
+
+er = EventRegistry(apiKey='62fd2d2a-c90f-4cc1-9b72-ad5f85739368')
 
 
 @api_view(['GET'])
@@ -15,25 +19,105 @@ def getRoutes(request):
     routes = [
         {'POST': 'api/users/token/'},
         {'POST': 'api/users/token/refresh/'},
+        {'POST': 'api/users/register/'},
+        {'POST': 'api/users/login/'},
     ]
     return Response(routes)
 
 
-class getNews(APIView) : 
+@api_view(['POST'])
+def registerUser(request):
+    data = request.data
+
+    # Validate the user input.
+    if not data['first_name']:
+        return Response({'detail': 'First name is required.'}, status=400)
+    if not data['last_name']:
+        return Response({'detail': 'Last name is required.'}, status=400)
+    if not data['username']:
+        return Response({'detail': 'Username is required.'}, status=400)
+    if User.objects.filter(username=data['username']).exists():
+        return Response({'detail': 'Username not available.'}, status=400)
+    try:
+        validate_email(data['email'])
+    except ValidationError:
+        return Response({'detail': 'Please enter a valid email address.'}, status=400)
+    if User.objects.filter(email=data['email']).exists():
+        return Response({'detail': 'User with this email already exists.'}, status=400)
+    if not data['password']:
+        return Response({'detail': 'Password is required.'}, status=400)
+    if not data['password_confirmation']:
+        return Response({'detail': 'Please confirm your password.'}, status=400)
+    if data['password'] != data['password_confirmation']:
+        return Response({'detail': 'Passwords do not match.'}, status=400)
+
+    # Hash the user password.
+    password = data['password']
+    user = User.objects.create_user(
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        username=data['username'],
+        email=data['email'],
+        password=password
+    )
+    user.set_password(password)
+    user.save()
+
+    return Response('User was created')
+
+
+@api_view(['POST'])
+def loginUser(request):
+    data = request.data
+    username_or_email = data['identifier']
+    password = data['password']
+
+    # Validate the user input.
+    if not username_or_email:
+        return Response({'detail': 'Username or email is required.'}, status=400)
+    if not password:
+        return Response({'detail': 'Password is required.'}, status=400)
+
+    # if the username_or_email is an email, get the user by email.
+    try:
+        validate_email(username_or_email)
+        if not User.objects.filter(email=username_or_email).exists():
+            return Response({'detail': 'User with this username or email does not exist.'}, status=404)
+        user = User.objects.get(email=username_or_email)
+    except ValidationError:
+        if not User.objects.filter(username=username_or_email).exists():
+            return Response({'detail': 'User with this username or email does not exist.'}, status=404)
+        user = User.objects.get(username=username_or_email)
+
+    # Check if the password is correct.
+    is_valid_password = authenticate(username=user.username, password=password)
+    if not is_valid_password:
+        return Response({'detail': 'Invalid password.'}, status=401)
+
+    # Login the user.
+    refresh = RefreshToken.for_user(user)
+    access = AccessToken.for_user(user)
+    data = {
+        'refresh': str(refresh),
+        'access': str(access),
+    }
+    return Response({'detail': 'User was logged in', 'refresh': data['refresh'], 'access': data['access']})
+
+
+class getNews(APIView):
 
     def get(self, request):
         q = QueryArticlesIter(
-        keywords = QueryItems.OR(["Elon Musk","Messi"]),
-        keywordsLoc = "body",
-        ignoreKeywords = "SpaceX",
-        dateStart = '2023-01-01',
-        dateEnd='2023-04-30',
-        lang='fra',
-        # lang = 'eng',
+            keywords=QueryItems.OR(["Elon Musk", "Messi"]),
+            keywordsLoc="body",
+            ignoreKeywords="SpaceX",
+            dateStart='2023-01-01',
+            dateEnd='2023-04-30',
+            lang='fra',
+            # lang = 'eng',
         )
         listAr = []
-        listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
+        listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(
+            articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
         json_response = json.dumps(listAr, indent=4)
         return Response(json_response)
-
- 
