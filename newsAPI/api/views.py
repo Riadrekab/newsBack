@@ -156,8 +156,12 @@ def getProfileTopics(request, username):
 class getNews(APIView):
 
     def get(self, request):
+
+        input = request.GET.get('input')
+        print(input)
         q = QueryArticlesIter(
-            keywords=QueryItems.OR(["Elon Musk", "Messi"]),
+            # keywords=QueryItems.OR(["Elon Musk", "Messi"]),
+            keywords= input,
             keywordsLoc="body",
             ignoreKeywords="SpaceX",
             dateStart='2023-01-01',
