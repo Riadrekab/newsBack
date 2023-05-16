@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-from .models import Profile, Device
+from .models import Profile
 from django.contrib.auth.signals import user_logged_in
 import os
 from django.conf import settings
@@ -34,20 +34,6 @@ def updateUser(sender, instance, created, **kwargs):
 def deleteUser(sender, instance, **kwargs):
     user = instance.user
     user.delete()
-
-
-@receiver(user_logged_in)
-def save_device(sender, user, request, **kwargs):
-    device = Device.objects.create(
-        profile=user.profile,
-        device_id=os.environ.get('DEVICE_ID'),
-        device_name=os.environ.get('DEVICE_NAME'),
-        device_type=os.environ.get('DEVICE_TYPE'),
-        device_os=os.environ.get('DEVICE_OS'),
-        device_os_version=os.environ.get('DEVICE_OS_VERSION'),
-        device_browser=os.environ.get('DEVICE_BROWSER'),
-        device_browser_version=os.environ.get('DEVICE_BROWSER_VERSION'),
-    )
 
 
 def connect_signal():
