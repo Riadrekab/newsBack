@@ -99,7 +99,7 @@ def decode_token(token):
 
 @api_view(['GET'])
 def validate_token(request):
-    token = request.data['access']
+    token = request.GET.get('access')
     try:
         payload = decode_token(str(token))
         user = User.objects.get(id=payload['user_id'])
