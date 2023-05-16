@@ -1,13 +1,19 @@
-from django.http import JsonResponse
-from rest_framework.decorators import api_view
+import jwt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken, TokenError, AccessToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.core.exceptions import ValidationError
+from .serializers import UserSerializer, ProfileSerializer, TopicSerializer
+from users.models import Profile, Topic, Result
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from django.http import HttpResponse
+from django.conf import settings
+
 
 from eventregistry import *
 
@@ -17,10 +23,15 @@ er = EventRegistry(apiKey='62fd2d2a-c90f-4cc1-9b72-ad5f85739368')
 @api_view(['GET'])
 def getRoutes(request):
     routes = [
-        {'POST': 'api/users/token/'},
-        {'POST': 'api/users/token/refresh/'},
-        {'POST': 'api/users/register/'},
         {'POST': 'api/users/login/'},
+        {'POST': 'api/users/login/refresh/'},
+        {'POST': 'api/users/register/'},
+        {'GET': 'api/users/valid-token/'},
+        {'GET': 'api/users/logout/blacklist/'},
+        {'GET': 'api/users/<str:username>/'},
+        {'POST': 'api/users/update/<str:username>/'},
+        {'GET': 'api/topics/'},
+        {'GET': 'api/topics/<str:username>/'},
     ]
     return Response(routes)
 
@@ -66,42 +77,80 @@ def registerUser(request):
     return Response('User was created')
 
 
-@api_view(['POST'])
-def loginUser(request):
-    data = request.data
-    username_or_email = data['identifier']
-    password = data['password']
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
 
-    # Validate the user input.
-    if not username_or_email:
-        return Response({'detail': 'Username or email is required.'}, status=400)
-    if not password:
-        return Response({'detail': 'Password is required.'}, status=400)
+        token['username'] = user.username
+        token['email'] = user.email
 
-    # if the username_or_email is an email, get the user by email.
+        return token
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+
+
+def decode_token(token):
+    payload = jwt.decode(token, algorithms="HS256", key=settings.SECRET_KEY)
+    return payload
+
+
+@api_view(['GET'])
+def validate_token(request):
+    token = request.data['access']
     try:
-        validate_email(username_or_email)
-        if not User.objects.filter(email=username_or_email).exists():
-            return Response({'detail': 'User with this username or email does not exist.'}, status=404)
-        user = User.objects.get(email=username_or_email)
-    except ValidationError:
-        if not User.objects.filter(username=username_or_email).exists():
-            return Response({'detail': 'User with this username or email does not exist.'}, status=404)
-        user = User.objects.get(username=username_or_email)
+        payload = decode_token(str(token))
+        user = User.objects.get(id=payload['user_id'])
+        return Response({'detail': 'Token is valid', 'username': user.username, 'valid': True}, status=200)
+    except:
+        return Response({'detail': 'Token is invalid', 'valid': False}, status=401)
 
-    # Check if the password is correct.
-    is_valid_password = authenticate(username=user.username, password=password)
-    if not is_valid_password:
-        return Response({'detail': 'Invalid password.'}, status=401)
 
-    # Login the user.
-    refresh = RefreshToken.for_user(user)
-    access = AccessToken.for_user(user)
-    data = {
-        'refresh': str(refresh),
-        'access': str(access),
-    }
-    return Response({'detail': 'User was logged in', 'refresh': data['refresh'], 'access': data['access']})
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getProfile(request, username):
+    user = User.objects.get(username=username)
+    profile = user.profile
+    return Response(ProfileSerializer(profile, many=False).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def updateProfile(request, username):
+    if request.user.username != username:
+        return Response({'detail': 'You do not have permission to edit this profile.', 'user': request.user.username}, status=401)
+
+    profile = get_object_or_404(Profile, user=request.user)
+
+    # update basic info
+    profile.first_name = request.data.get('first_name', profile.first_name)
+    profile.last_name = request.data.get('last_name', profile.last_name)
+    profile.username = request.data.get('username', profile.username)
+    profile.email = request.data.get('email', profile.email)
+
+    # update preferred topics
+    preferred_topic_ids = request.data.get('preferred_topics', [])
+    preferred_topics = Topic.objects.filter(id__in=preferred_topic_ids)
+    profile.preferred_topics.set(preferred_topics)
+
+    profile.save()
+
+    return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(profile, many=False).data}, status=200)
+
+
+@api_view(['GET'])
+def getTopics(request):
+    topics = Topic.objects.all()
+    return Response(TopicSerializer(topics, many=True).data)
+
+
+@api_view(['GET'])
+def getProfileTopics(request, username):
+    profile = get_object_or_404(Profile, username=username)
+    topics = profile.preferred_topics.all()
+    return Response(TopicSerializer(topics, many=True).data)
 
 
 class getNews(APIView):
