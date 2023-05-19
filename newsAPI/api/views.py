@@ -119,23 +119,26 @@ def getProfile(request, username):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def updateProfile(request, username):
-    if request.user.username != username:
-        return Response({'detail': 'You do not have permission to edit this profile.', 'user': request.user.username}, status=401)
+    print("test")
+    # if request.user.username != username:
+    #     return Response({'detail': 'You do not have permission to edit this profile.', 'user': request.user.username}, status=401)
 
-    profile = get_object_or_404(Profile, user=request.user)
+    # profile = get_object_or_404(Profile, user=request.user)
+
+    user = Profile.objects.filter(username = request.data['username']).first()
 
     # update basic info
-    profile.first_name = request.data.get('first_name', profile.first_name)
-    profile.last_name = request.data.get('last_name', profile.last_name)
-    profile.username = request.data.get('username', profile.username)
-    profile.email = request.data.get('email', profile.email)
+    user.first_name = request.data.get('first_name', user.first_name)
+    user.last_name = request.data.get('last_name', user.last_name)
+    user.username = request.data.get('username', user.username)
+    user.email = request.data.get('email', user.email)
 
     # update preferred topics
     preferred_topic_ids = request.data.get('preferred_topics', [])
     preferred_topics = Topic.objects.filter(id__in=preferred_topic_ids)
-    profile.preferred_topics.set(preferred_topics)
+    user.preferred_topics.set(preferred_topics)
 
-    profile.save()
+    user.save()
 
     return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(profile, many=False).data}, status=200)
 
