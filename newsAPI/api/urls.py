@@ -21,5 +21,7 @@ urlpatterns = [
     path('topics/', views.getTopics, name='topics'),
     path('topics/<str:username>/', views.getProfileTopics, name='topic'),
 
-    path('getNews', views.getNews.as_view())
+    path('getNews', views.getNews.as_view()),
+    path('getFeatured', views.getFeatured.as_view())
+
 ]

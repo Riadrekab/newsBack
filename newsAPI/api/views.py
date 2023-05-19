@@ -177,3 +177,39 @@ class getNews(APIView):
             articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
         json_response = json.dumps(listAr, indent=4)
         return Response(json_response)
+    
+
+def getTopicsFromUserName(username):
+    profile = get_object_or_404(Profile, username=username)
+    topics = profile.preferred_topics.all()
+    print(topics)
+
+class getFeatured(APIView):
+
+    def get(self, request):
+
+        input = request.GET.get('username')
+        user = Profile.objects.filter(username = request.data['username']).first()
+
+        getTopicsFromUserName(user.username)
+
+
+        # print(input)
+        # q = QueryArticlesIter(
+        #     # keywords=QueryItems.OR(["Elon Musk", "Messi"]),
+        #     keywords= input,
+        #     keywordsLoc="body",
+        #     # ignoreKeywords="SpaceX",
+        #     dateStart='2023-01-01',
+        #     # dateEnd='2023-04-30',
+        #     # lang='fra',
+        #     lang = 'eng',
+        # )
+        # listAr = []
+        # listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(
+        #     articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
+        # json_response = json.dumps(listAr, indent=4)
+        # return Response(json_response)
+
+
+
