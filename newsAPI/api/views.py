@@ -117,9 +117,8 @@ def getProfile(request, username):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def updateProfile(request, username):
-    print("test")
     # if request.user.username != username:
     #     return Response({'detail': 'You do not have permission to edit this profile.', 'user': request.user.username}, status=401)
 
@@ -140,7 +139,7 @@ def updateProfile(request, username):
 
     user.save()
 
-    return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(profile, many=False).data}, status=200)
+    return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(user, many=False).data}, status=200)
 
 
 @api_view(['GET'])
@@ -177,3 +176,39 @@ class getNews(APIView):
             articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
         json_response = json.dumps(listAr, indent=4)
         return Response(json_response)
+    
+
+def getCategoriesFromUserName(username):
+    profile = get_object_or_404(Profile, username=username)
+    topics = profile.preferred_topics.all()
+    listTopics = []
+    listTopics = [item.category.name for item in topics]
+    return listTopics
+
+
+
+@api_view(['GET'])
+
+def getFeatured(request,username):
+
+    input = username
+    user = Profile.objects.filter(username = input).first()
+    q = QueryArticlesIter(
+        keywords=QueryItems.OR(getCategoriesFromUserName(user.username)),
+        # keywords= input,
+        keywordsLoc="body",
+        # ignoreKeywords="SpaceX",
+        dateStart='2023-01-01',
+        # dateEnd='2023-04-30',
+        # lang='fra',
+        lang = 'eng',
+    )
+    listAr = []
+    # Check if article matches 
+    listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(
+        articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=20)]
+    json_response = json.dumps(listAr, indent=4)
+    return Response(json_response)
+
+
+
