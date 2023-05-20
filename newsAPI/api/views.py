@@ -211,4 +211,3 @@ def getFeatured(request,username):
     return Response(json_response)
 
 
-
