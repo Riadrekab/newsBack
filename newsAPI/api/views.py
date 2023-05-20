@@ -236,3 +236,9 @@ def getFeatured(request, username):
     json_response = json.dumps(listAr, indent=4)
     return Response(json_response)
 
+
+
+class saveHistory(APIView) : 
+    def post(request, username ):
+        user = Profile.objects.filter(user = username).first()
+        
