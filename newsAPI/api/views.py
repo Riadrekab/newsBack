@@ -235,8 +235,4 @@ def getFeatured(request, username):
         articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=20)]
     json_response = json.dumps(listAr, indent=4)
     return Response(json_response)
-<<<<<<< HEAD
 
-
-=======
->>>>>>> 2fa8e1f7ee9ec3f08083b2f8c78ae268475c6cfb
