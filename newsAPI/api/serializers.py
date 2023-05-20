@@ -29,18 +29,18 @@ class TopicSerializer(serializers.ModelSerializer):
 class ResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = Result
-        fields = '__all__'
+        fields = ['id', 'title', 'url', 'image', 'body', 'created_at']
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     preferred_topics = TopicSerializer(many=True)
-    results = serializers.SerializerMethodField()
+    savedResults = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = '__all__'
 
-    def get_results(self, obj):
+    def get_savedResults(self, obj):
         results = obj.result_set.all()
         serializer = ResultSerializer(results, many=True)
         return serializer.data

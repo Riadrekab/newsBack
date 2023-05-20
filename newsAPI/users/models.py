@@ -38,11 +38,12 @@ class Result(models.Model):
     title = models.CharField(max_length=250, null=True, blank=True)
     body = models.TextField(null=True, blank=True)
     url = models.URLField(max_length=600, null=True, blank=True)
-    author = models.CharField(max_length=250, null=True, blank=True)
-    source = models.CharField(max_length=250, null=True, blank=True)
-    date = models.DateTimeField(null=True, blank=True)
     image = models.CharField(max_length=250, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['profile', 'title']
 
     def __str__(self):
         return str(self.title)

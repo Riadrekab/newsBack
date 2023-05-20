@@ -7,13 +7,12 @@ from django.core.validators import validate_email
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.core.exceptions import ValidationError
-from .serializers import UserSerializer, ProfileSerializer, TopicSerializer
+from .serializers import UserSerializer, ProfileSerializer, TopicSerializer, ResultSerializer
 from users.models import Profile, Topic, Result
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from django.http import HttpResponse
 from django.conf import settings
-
 
 from eventregistry import *
 
@@ -124,7 +123,7 @@ def updateProfile(request, username):
 
     # profile = get_object_or_404(Profile, user=request.user)
 
-    user = Profile.objects.filter(username = request.data['username']).first()
+    user = Profile.objects.filter(username=request.data['username']).first()
 
     # update basic info
     user.first_name = request.data.get('first_name', user.first_name)
@@ -139,7 +138,8 @@ def updateProfile(request, username):
 
     user.save()
 
-    return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(user, many=False).data}, status=200)
+    return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(user, many=False).data},
+                    status=200)
 
 
 @api_view(['GET'])
@@ -155,15 +155,44 @@ def getProfileTopics(request, username):
     return Response(TopicSerializer(topics, many=True).data)
 
 
+@api_view(['GET'])
+def savedResults(request, username):
+    user = User.objects.get(username=username)
+    results = user.profile.result_set.all()
+    return Response(ResultSerializer(results, many=True).data)
+
+
+@api_view(['POST'])
+def saveResult(request, username):
+    user = User.objects.get(username=username)
+    profile = user.profile
+    result = Result.objects.create(
+        profile=profile,
+        title=request.data['title'],
+        body=request.data['body'],
+        url=request.data['url'],
+        image=request.data['image'],
+    )
+    return Response(ResultSerializer(result, many=False).data)
+
+
+@api_view(['DELETE'])
+def deleteResult(request, username):
+    user = User.objects.get(username=username)
+    profile = user.profile
+    result = profile.result_set.get(id=request.data['id'])
+    result.delete()
+    return Response('Result deleted')
+
+
 class getNews(APIView):
 
     def get(self, request):
-
         input = request.GET.get('input')
         print(input)
         q = QueryArticlesIter(
             # keywords=QueryItems.OR(["Elon Musk", "Messi"]),
-            keywords= input,
+            keywords=input,
             keywordsLoc="body",
             ignoreKeywords="SpaceX",
             dateStart='2023-01-01',
@@ -176,7 +205,7 @@ class getNews(APIView):
             articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
         json_response = json.dumps(listAr, indent=4)
         return Response(json_response)
-    
+
 
 def getCategoriesFromUserName(username):
     profile = get_object_or_404(Profile, username=username)
@@ -186,13 +215,10 @@ def getCategoriesFromUserName(username):
     return listTopics
 
 
-
 @api_view(['GET'])
-
-def getFeatured(request,username):
-
+def getFeatured(request, username):
     input = username
-    user = Profile.objects.filter(username = input).first()
+    user = Profile.objects.filter(username=input).first()
     q = QueryArticlesIter(
         keywords=QueryItems.OR(getCategoriesFromUserName(user.username)),
         # keywords= input,
@@ -201,7 +227,7 @@ def getFeatured(request,username):
         dateStart='2023-01-01',
         # dateEnd='2023-04-30',
         # lang='fra',
-        lang = 'eng',
+        lang='eng',
     )
     listAr = []
     # Check if article matches 
@@ -209,5 +235,8 @@ def getFeatured(request,username):
         articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=20)]
     json_response = json.dumps(listAr, indent=4)
     return Response(json_response)
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 2fa8e1f7ee9ec3f08083b2f8c78ae268475c6cfb

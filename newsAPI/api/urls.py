@@ -18,6 +18,10 @@ urlpatterns = [
     path('users/<str:username>/', views.getProfile, name='profile'),
     path('users/update/<str:username>/', views.updateProfile, name='update-profile'),
 
+    path('users/results/<str:username>/', views.savedResults, name='saved-results'),
+    path('users/results/save/<str:username>/', views.saveResult, name='save-result'),
+    path('users/results/delete/<str:username>/', views.deleteResult, name='delete-result'),
+
     path('topics/', views.getTopics, name='topics'),
     path('topics/<str:username>/', views.getProfileTopics, name='topic'),
 
