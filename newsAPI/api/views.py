@@ -7,14 +7,36 @@ from django.core.validators import validate_email
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.core.exceptions import ValidationError
-from .serializers import HistorySerializer, UserSerializer, ProfileSerializer, TopicSerializer, ResultSerializer
+from .serializers import UserSerializer, ProfileSerializer, TopicSerializer, ResultSerializer
 from users.models import Profile, Topic, Result,historyResult
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.conf import settings
 
 from eventregistry import *
+
+import torch
+
+import json
+
+from scipy.special import softmax
+
+import time
+
+from flask import Flask, jsonify, request
+
+
+
+import requests
+
+import json
+
+import os
+
+
+TARGET_NAMES = ['World', 'Sports', 'Business', 'science'] 
+
 
 er = EventRegistry(apiKey='62fd2d2a-c90f-4cc1-9b72-ad5f85739368')
 
@@ -197,8 +219,8 @@ class getNews(APIView):
             ignoreKeywords="SpaceX",
             dateStart='2023-01-01',
             dateEnd='2023-04-30',
-            lang='fra',
-            # lang = 'eng',
+            # lang='fra',
+            lang = 'eng',
         )
         listAr = []
         listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(
@@ -260,4 +282,113 @@ def getHistory(request,username):
     return JsonResponse(inputs, safe=False)
     
     
-    # return Response(HistorySerializer(results, many=True).data)
+model = torch.load("../saved_model_bert_uncased_L-2_H-128_A-2") 
+
+
+def make_predictions(texts_list, ids_list, extras_list=()):
+
+    # """
+
+    # Predict output classes from text documents
+
+    # :param texts_list: list of text documents
+
+    # :param ids_list: lists of the ids of the text documents
+
+    # :param extras_list: lists of the extra attributes of each text document as dictionaries
+
+    # :return: A list of dictionaries each containing the document id, text content, extra attributes and a list for the
+
+    #             predicted classes
+
+    # """
+    print("1")
+    preds, raw_outputs = model.predict(texts_list)  # Predict from DL model
+    print("2")
+
+    probabilities = softmax(raw_outputs, axis=1)
+    print("3")
+
+    predicted_classes = []
+
+ 
+
+    # For each prediction find the corresponding class(es)
+
+    for index, probs in enumerate(probabilities):
+
+        classes_indexes = []
+
+        for pos, prob in enumerate(probs):
+
+            # If the probability is >= to the 1/number_of_classes
+
+            # then the corresponding class is significant enough to be considered
+
+            if prob >= 1.0/float(len(TARGET_NAMES)):
+
+                classes_indexes.append((prob, pos))
+
+        # Sort infered classes with respect to decreasing probabilities
+
+        classes_indexes.sort(key= lambda x: x[0], reverse=True)
+
+        classes = [TARGET_NAMES[p[1]] for p in classes_indexes]
+
+        predicted_classes.append(classes)
+
+ 
+
+    print(predicted_classes)
+
+ 
+
+    predictions_json = []
+
+    # Format the predictions before returning
+
+    for index in range(0, len(texts_list)):
+
+        _p = {
+
+            "id": ids_list[index],
+
+            # "predicted_class": TARGET_NAMES[preds[index]],
+
+            "predicted_class": predicted_classes[index],
+
+            "text": texts_list[index]
+
+        }
+
+        if extras_list:
+
+            extra_data = extras_list[index]
+
+            if extra_data:
+
+                for k, v in extra_data.items():
+
+                    _p[k] = v
+
+        predictions_json.append(_p)
+
+    return predictions_json
+
+
+# text2 = "MYSTERY lab in Wuhan conducted secret experiments to clone and soup up coronaviruses to infect humans, a bombshell study has revealed. For the last three years, a group of scientists have been combing through online databases and other sources of evidence for vital clues about the origins of Covid. "
+# text1 = "FC Barcelona won the Spanish championanship by 14 points from it's eternal rival Real Madrid after a record breaking season for the spanish giant"
+
+# text_lists = [text1,text2]
+# ids = [1,2]
+# print(make_predictions(text_lists,ids))
+
+
+
+@api_view(['GET'])
+def predictTopic(request):
+    text2 = "MYSTERY lab in Wuhan conducted secret experiments to clone and soup up coronaviruses to infect humans, a bombshell study has revealed. For the last three years, a group of scientists have been combing through online databases and other sources of evidence for vital clues about the origins of Covid. "
+    text1 = "FC Barcelona won the Spanish championanship by 14 points from it's eternal rival Real Madrid after a record breaking season for the spanish giant"
+    text_lists = [text1,text2]
+    ids = [1,2]
+    print(make_predictions(text_lists,ids))
