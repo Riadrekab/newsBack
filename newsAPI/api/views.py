@@ -11,7 +11,7 @@ from .serializers import UserSerializer, ProfileSerializer, TopicSerializer, Res
 from users.models import Profile, Topic, Result,historyResult
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
-from django.http import HttpResponse
+from django.http import HttpResponse,JsonResponse
 from django.conf import settings
 
 from eventregistry import *
@@ -26,6 +26,7 @@ import time
 
 from flask import Flask, jsonify, request
 
+import json
 
 
 import requests
@@ -35,8 +36,7 @@ import json
 import os
 
 
-TARGET_NAMES = ['World', 'Sports', 'Business', 'science'] 
-
+TARGET_NAMES = ['World', 'Sports', 'Business', 'Sci/Tech'] 
 
 er = EventRegistry(apiKey='62fd2d2a-c90f-4cc1-9b72-ad5f85739368')
 
@@ -210,11 +210,11 @@ def deleteResult(request, username):
 class getNews(APIView):
 
     def get(self, request):
-        input = request.GET.get('input')
-        print(input)
+        inputUser = request.GET.get('input')
+        print(inputUser)
         q = QueryArticlesIter(
             # keywords=QueryItems.OR(["Elon Musk", "Messi"]),
-            keywords=input,
+            keywords=inputUser,
             keywordsLoc="body",
             ignoreKeywords="SpaceX",
             dateStart='2023-01-01',
@@ -226,6 +226,7 @@ class getNews(APIView):
         listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(
             articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=50)]
         json_response = json.dumps(listAr, indent=4)
+        print(json_response)
         return Response(json_response)
 
 
@@ -241,8 +242,11 @@ def getCategoriesFromUserName(username):
 def getFeatured(request, username):
     input = username
     user = Profile.objects.filter(username=input).first()
+    print(getCategoriesFromUserName(user.username))
     q = QueryArticlesIter(
-        keywords=QueryItems.OR(getCategoriesFromUserName(user.username)),
+        keywords= '',
+
+        # keywords=QueryItems.OR(getCategoriesFromUserName(user.username)),
         # keywords= input,
         keywordsLoc="body",
         # ignoreKeywords="SpaceX",
@@ -254,8 +258,23 @@ def getFeatured(request, username):
     listAr = []
     # Check if article matches 
     listAr = [article for article in q.execQuery(er, sortBy="rel", returnInfo=ReturnInfo(
-        articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=20)]
-    json_response = json.dumps(listAr, indent=4)
+        articleInfo=ArticleInfoFlags(concepts=True, categories=True)), maxItems=100)]
+    listIds = list(range(1, len(listAr) + 1))
+    listAr2 = [item['body'] for item in listAr]
+    vals = make_predictions(listAr2,listIds)
+    classes = [item['predicted_class'] for item in vals]
+    savedTexts = []
+    i = 0
+    # listUserClasses = getCategoriesFromUserName(user.username)
+    
+    listUserClasses = ['Sports', 'Business']
+
+    while (i< len(classes)):
+        if(any(element in  listUserClasses for element in classes[i] )   ):
+            savedTexts.append(listAr[i])
+        i +=1
+    print(listUserClasses)
+    json_response = json.dumps(savedTexts, indent=4)
     return Response(json_response)
 
 
@@ -302,13 +321,10 @@ def make_predictions(texts_list, ids_list, extras_list=()):
     #             predicted classes
 
     # """
-    print("1")
     preds, raw_outputs = model.predict(texts_list)  # Predict from DL model
-    print("2")
 
     probabilities = softmax(raw_outputs, axis=1)
-    print("3")
-
+  
     predicted_classes = []
 
  
@@ -387,8 +403,8 @@ def make_predictions(texts_list, ids_list, extras_list=()):
 
 @api_view(['GET'])
 def predictTopic(request):
-    text2 = "MYSTERY lab in Wuhan conducted secret experiments to clone and soup up coronaviruses to infect humans, a bombshell study has revealed. For the last three years, a group of scientists have been combing through online databases and other sources of evidence for vital clues about the origins of Covid. "
-    text1 = "FC Barcelona won the Spanish championanship by 14 points from it's eternal rival Real Madrid after a record breaking season for the spanish giant"
+    text2 = "PART OF what makes HBO's Succession so great is that each and every character in the show -- for better and for worse -- feels completely, 100% like a real person. And that leads to situations that feel like real situations. And moments that feel like real moments. And when something like that is fleshed out so strongly, it can lead to revelations we never thought we would see, such as four of Logan Roy's previous wives and mistresses sitting together in unity at his funeral. Such was one of many memorable scenes in Season 4, Episode 9, Church and State. Maybe the fact that it was only after he was finally gone that four specific people who were once close to the miserable Logan ca "
+    text1 = "FC Barcelona won the Spanish championanship by 14 points from it's eternal rival Real Madrid after a record breaking season for the spanish giant. The catalan football club has made huge progress this year, scoring 110 goals and conceeding only 10"
     text_lists = [text1,text2]
     ids = [1,2]
     print(make_predictions(text_lists,ids))
