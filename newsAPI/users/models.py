@@ -1,7 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils import timezone
-from django.core.exceptions import ValidationError
 import uuid
 
 
@@ -32,3 +30,23 @@ class Profile(models.Model):
 
     def __str__(self):
         return str(self.user.username)
+
+class historyResult(models.Model) :
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    input = models.CharField(max_length=250, null=True, blank=True)
+
+
+class Result(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    title = models.CharField(max_length=250, null=True, blank=True)
+    body = models.TextField(null=True, blank=True)
+    url = models.URLField(max_length=600, null=True, blank=True)
+    image = models.CharField(max_length=250, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['profile', 'title']
+    def __str__(self):
+        return str(self.title)
