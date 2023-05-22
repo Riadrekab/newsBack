@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from users.models import Profile, Category, Topic, Result
+from users.models import Profile, Category, Topic, Result,historyResult
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -30,6 +30,11 @@ class ResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = Result
         fields = ['id', 'title', 'url', 'image', 'body', 'created_at']
+
+class HistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = historyResult
+        fields = ['id','input']
 
 
 class ProfileSerializer(serializers.ModelSerializer):

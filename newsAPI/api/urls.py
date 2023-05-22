@@ -27,7 +27,10 @@ urlpatterns = [
 
     path('getNews', views.getNews.as_view()),
     path('getFeatured/<str:username>/', views.getFeatured),
-    # path('saveSearch', views.saveSearch.as_view())
+    path('saveHistory', views.saveHistory.as_view()),
+    path('users/history/<str:username>/', views.getHistory)
+
+
 
 
 ]
