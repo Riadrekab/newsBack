@@ -7,11 +7,11 @@ from django.core.validators import validate_email
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.core.exceptions import ValidationError
-from .serializers import UserSerializer, ProfileSerializer, TopicSerializer, ResultSerializer
-from users.models import Profile, Topic, Result
+from .serializers import HistorySerializer, UserSerializer, ProfileSerializer, TopicSerializer, ResultSerializer
+from users.models import Profile, Topic, Result,historyResult
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 
 from eventregistry import *
@@ -239,6 +239,25 @@ def getFeatured(request, username):
 
 
 class saveHistory(APIView) : 
-    def post(request, username ):
-        user = Profile.objects.filter(user = username).first()
+    def post(self,request):
+        user = User.objects.get(username = request.data['username'])
+        profile = user.profile
+        res = historyResult.objects.create(
+            profile = profile,
+            input = request.data['search']
+        )
+        return JsonResponse('Done',safe=False)
+    
+
+
         
+@api_view(['GET'])
+def getHistory(request,username):
+    profil = Profile.objects.filter(username=username).first()
+    res = historyResult.objects.filter(profile= profil).all()
+    inputs = []
+    inputs = [item.input for item in res]
+    return JsonResponse(inputs, safe=False)
+    
+    
+    # return Response(HistorySerializer(results, many=True).data)
