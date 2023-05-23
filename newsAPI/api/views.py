@@ -40,6 +40,11 @@ TARGET_NAMES = ['World', 'Sports', 'Business', 'Sci/Tech']
 
 er = EventRegistry(apiKey='62fd2d2a-c90f-4cc1-9b72-ad5f85739368')
 
+def replace_element(lst, old_element, new_element):
+    for i in range(len(lst)):
+        if lst[i] == old_element:
+            lst[i] = new_element
+    return lst
 
 @api_view(['GET'])
 def getRoutes(request):
@@ -154,6 +159,7 @@ def updateProfile(request, username):
     user.email = request.data.get('email', user.email)
 
     # update preferred topics
+
     preferred_topic_ids = request.data.get('preferred_topics', [])
     preferred_topics = Topic.objects.filter(id__in=preferred_topic_ids)
     user.preferred_topics.set(preferred_topics)
@@ -238,11 +244,11 @@ def getCategoriesFromUserName(username):
     return listTopics
 
 
+
 @api_view(['GET'])
 def getFeatured(request, username):
     input = username
     user = Profile.objects.filter(username=input).first()
-    print(getCategoriesFromUserName(user.username))
     q = QueryArticlesIter(
         keywords= '',
 
@@ -264,16 +270,19 @@ def getFeatured(request, username):
     vals = make_predictions(listAr2,listIds)
     classes = [item['predicted_class'] for item in vals]
     savedTexts = []
-    i = 0
-    # listUserClasses = getCategoriesFromUserName(user.username)
-    
-    listUserClasses = ['Sports', 'Business']
+    i = 0    
+    listUserClasses = getCategoriesFromUserName(user.username) 
+    listUserClasses = replace_element(listUserClasses, "Technology", "Sci/Tech")
+    listUserClasses = replace_element(listUserClasses, "Careers", "Business")
+    listUserClasses = replace_element(listUserClasses, "Brands", "World")
 
+
+    print(listUserClasses)
+    print("ohuhu")
     while (i< len(classes)):
         if(any(element in  listUserClasses for element in classes[i] )   ):
             savedTexts.append(listAr[i])
         i +=1
-    print(listUserClasses)
     json_response = json.dumps(savedTexts, indent=4)
     return Response(json_response)
 
