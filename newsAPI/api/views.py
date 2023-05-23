@@ -278,7 +278,6 @@ def getFeatured(request, username):
 
 
     print(listUserClasses)
-    print("ohuhu")
     while (i< len(classes)):
         if(any(element in  listUserClasses for element in classes[i] )   ):
             savedTexts.append(listAr[i])
@@ -417,3 +416,13 @@ def predictTopic(request):
     text_lists = [text1,text2]
     ids = [1,2]
     print(make_predictions(text_lists,ids))
+
+
+@api_view(['GET'])
+def checkIfHasPrefered(request,username):
+    listUserClasses = getCategoriesFromUserName(username) 
+    if(len(listUserClasses) ==0 ):
+        return JsonResponse("Empty",safe=False)
+    return JsonResponse("Full",safe=False)
+     
+

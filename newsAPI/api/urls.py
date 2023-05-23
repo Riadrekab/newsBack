@@ -29,6 +29,8 @@ urlpatterns = [
     path('getFeatured/<str:username>/', views.getFeatured),
     path('saveHistory', views.saveHistory.as_view()),
     path('users/history/<str:username>/', views.getHistory),
-    path('predict/', views.predictTopic)
+    path('predict/', views.predictTopic),
+    path('checkPref/<str:username>/', views.checkIfHasPrefered)
+
 
 ]
