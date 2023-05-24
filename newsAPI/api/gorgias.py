@@ -1,8 +1,8 @@
 import requests
 
 url = "http://aiasvm1.amcl.tuc.gr:8085"
-username = "your_username"  # remember your username !
-password = "your_password"  # remember your password !
+username = "nderic"  # remember your username !
+password = "Gbak@2001!"  # remember your password !
 
 
 def create_project(project_name=""):
@@ -62,8 +62,9 @@ def deleteFile(filename="", project="", ):
     return r.json()
 
 
-def queryGorgias(facts=[], gorgias_file=""):
-    query = "stay_home"  # prolog query
+def queryGorgias(facts=None, query="", gorgias_file=""):
+    if facts is None:
+        facts = []
     data = {
         "facts": facts,
         "gorgiasFiles": [
