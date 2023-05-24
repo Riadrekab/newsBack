@@ -30,7 +30,9 @@ urlpatterns = [
     path('saveHistory', views.saveHistory.as_view()),
     path('users/history/<str:username>/', views.getHistory),
     path('predict/', views.predictTopic),
-    path('checkPref/<str:username>/', views.checkIfHasPrefered)
+    path('checkPref/<str:username>/', views.checkIfHasPrefered),
+    path('updateGorcias/<str:username>/', views.saveGorcias.as_view())
+
 
 
 ]
