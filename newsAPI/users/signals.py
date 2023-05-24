@@ -7,6 +7,7 @@ from api.gorgias import addFile, updateFile, queryGorgias
 import os
 from django.conf import settings
 from django.utils import timezone
+import datetime
 
 
 def createProfile(sender, instance, created, **kwargs):
@@ -46,8 +47,8 @@ def updateUser(sender, instance, created, **kwargs):
         else:
             pass
 
-        current_hour = timezone.now().hour
-        current_day = timezone.now().weekday()
+        current_hour = datetime.datetime.now().hour + 2
+        current_day = datetime.datetime.now().weekday()
         at_work = False
         if profile.work == '1':
             profile_work_from = profile.at_work_from.hour
@@ -56,7 +57,6 @@ def updateUser(sender, instance, created, **kwargs):
                 at_work = True
         else:
             at_work = False
-
         # check if the user has a preference
         categories = []
         if profile.preferred_topics.exists():
@@ -69,7 +69,7 @@ def updateUser(sender, instance, created, **kwargs):
             categories = list(set(categories))
 
         # if user has set a preference
-        gorgias_preference = ":- dynamic all_time/0, at_work/0, weekend/0.\n"
+        gorgias_preference = ":- dynamic all_time/0, at_work/0, not_at_work/0, weekend/0.\n" + "neg(at_work):- not_at_work.\n"
         if profile.preference_set.all().exists():
             # get the preference
             preferences = profile.preference_set.all()
@@ -89,17 +89,25 @@ def updateUser(sender, instance, created, **kwargs):
                 elif corresponding.see_at_weekend is True and corresponding.see_at_work is True:
                     rule_actions[rule_name] = 'all_time'
 
-            # update the gorgias_preference string
+            # generate default rules every set :- not_at-work
+            rules_count = []
             for rule, action in rule_actions.items():
-                gorgias_preference += f'rule({rule}, {rules[rule].lower()}, []) :- {action}.\n'
+                gorgias_preference += f'rule({rule}, {rules[rule].lower()}, []):- neg(at_work).\n'
+                rules_count.append(rule)
 
-            # generate the prefer rule for every combination of preferences every rule must have a prefer rule if we have 2 rules we have 2 prefer rules example rule 1 is prefered over rule 2 and rule 2 is prefered over rule 1
-            count = 1
-            for i in range(1, len(rules) + 1):
-                for j in range(1, len(rules) + 1):
-                    if i != j:
-                        gorgias_preference += f'rule(p{count}, prefer(r{i}, r{j}), []).\n'
-                        count += 1
+            # update the gorgias_preference string based on the action of the rule
+            new_rules_ele = []
+            for rule, action in rule_actions.items():
+                for i, r in enumerate(rules_count):
+                    if r == rule:
+                        gorgias_preference += f'rule(r{i + 1 + len(rules_count)}, {rules[r].lower()}, []):- {action}.\n'
+                        new_rules_ele.append(i + 1 + len(rules_count))
+
+            # generate the preference to the new rules
+            for i, r in enumerate(rules_count):
+                for j in new_rules_ele:
+                    if j - 1 - len(rules_count) == i:
+                        gorgias_preference += f'rule(p{i + 1}, prefer(r{j}, r{i + 1}), []).\n'
 
             # generate complement rules for every rule
             for i in range(1, len(rules) + 1):
@@ -123,6 +131,8 @@ def updateUser(sender, instance, created, **kwargs):
             facts = ["all_time"]
             if at_work and current_day < 5:
                 facts.append('at_work')
+            if not at_work and current_day < 5:
+                facts.append('not_at_work')
             if current_day > 5:
                 facts.append('weekend')
 
@@ -130,7 +140,8 @@ def updateUser(sender, instance, created, **kwargs):
                 res = queryGorgias(facts, preference.category.name.lower(), f"newsfilter/{user.username}")
                 if res["hasResult"] is True:
                     topic_to_show.append(preference.category.name)
-            print(topic_to_show)
+            print(f'facts: {facts}')
+            print(f'topics to show: {topic_to_show}')
 
 
 def deleteUser(sender, instance, **kwargs):
