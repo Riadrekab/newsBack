@@ -8,11 +8,12 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.core.exceptions import ValidationError
 from .serializers import UserSerializer, ProfileSerializer, TopicSerializer, ResultSerializer
-from users.models import Profile, Topic, Result,historyResult
+from users.models import Profile, Topic, Result,historyResult,Preference,Category
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from django.http import HttpResponse,JsonResponse
 from django.conf import settings
+from users.signals import updateFile as SignalUpdateProfils
 
 from eventregistry import *
 
@@ -169,6 +170,12 @@ def updateProfile(request, username):
     return Response({'detail': 'Profile updated successfully.', 'profile': ProfileSerializer(user, many=False).data},
                     status=200)
 
+# @api_view(['GET'])
+# def updateGorcias():
+#     SignalUpdateProfils()
+
+
+
 
 @api_view(['GET'])
 def getTopics(request):
@@ -276,8 +283,6 @@ def getFeatured(request, username):
     listUserClasses = replace_element(listUserClasses, "Careers", "Business")
     listUserClasses = replace_element(listUserClasses, "Brands", "World")
 
-
-    print(listUserClasses)
     while (i< len(classes)):
         if(any(element in  listUserClasses for element in classes[i] )   ):
             savedTexts.append(listAr[i])
@@ -426,3 +431,46 @@ def checkIfHasPrefered(request,username):
     return JsonResponse("Full",safe=False)
      
 
+
+
+class saveGorcias(APIView):
+    def post(self, request,username):
+        data = request.data# Assuming the data is sent as 'data' parameter
+        profil = Profile.objects.filter(username=username).first()
+        for elem in data : 
+            if(elem["isChecked"]):
+                pref = Preference()
+                if(elem['name'] == "Sci/Tech" ):
+                    elem['name'] = "Technology"
+                elif (elem['name'] == "Business") : 
+                    elem['name'] = "Careers"
+                elif (elem['name'] == "World") : 
+                    elem['name'] = "Brands"
+
+                cat = Category()
+                cat.name = elem['name']
+                pref.category = cat
+
+                if(elem['atWork']):
+                    pref.see_at_work = True
+                if(elem['Weekend']): 
+                    pref.see_at_weekend = True
+                pref.profile = profil
+                pref.save()
+    
+
+
+
+    
+
+
+                    
+                    
+
+        
+            
+        
+
+
+        # Process the data as needed
+        return Response({'message': 'Data received successfully'})
