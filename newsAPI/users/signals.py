@@ -51,8 +51,10 @@ def updateUser(sender, instance, created, **kwargs):
         current_day = datetime.datetime.now().weekday()
         at_work = False
         if profile.work == '1':
-            profile_work_from = profile.at_work_from.hour
-            profile_work_to = profile.at_work_to.hour
+            start = datetime.datetime.strptime(str(profile.at_work_from),'%H:%M:%S').time()
+            finish = datetime.datetime.strptime(str(profile.at_work_to),'%H:%M:%S').time()
+            profile_work_from = start.hour  
+            profile_work_to = finish.hour
             if profile_work_from < current_hour < profile_work_to:
                 at_work = True
         else:
@@ -135,6 +137,7 @@ def updateUser(sender, instance, created, **kwargs):
                 facts.append('not_at_work')
             if current_day > 5:
                 facts.append('weekend')
+            Profile.objects.filter(user=user).update(preference_facts=','.join(facts))
 
             for preference in preferences:
                 res = queryGorgias(facts, preference.category.name.lower(), f"newsfilter/{user.username}")
