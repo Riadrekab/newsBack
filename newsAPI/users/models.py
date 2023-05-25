@@ -35,6 +35,8 @@ class Profile(models.Model):
     at_work_to = models.TimeField(null=True, blank=True)
     preferred_topics = models.ManyToManyField(Topic, related_name='preferred_topics', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    preference_facts= models.TextField(max_length=200,null=True,blank=True)
+    gorcias = models.BooleanField(default=False)
 
     def clean(self):
         if self.work == '1':
@@ -78,7 +80,7 @@ class Preference(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    see_at_work = models.BooleanField(default=False)
+    see_at_work = models.BooleanField(default=False) 
     see_at_weekend = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

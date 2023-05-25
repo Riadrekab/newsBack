@@ -151,7 +151,7 @@ def updateProfile(request, username):
 
     # profile = get_object_or_404(Profile, user=request.user)
 
-    user = Profile.objects.filter(username=request.data['username']).first()
+    user = Profile.objects.filter(username=username).first()
 
     # update basic info
     user.first_name = request.data.get('first_name', user.first_name)
@@ -159,6 +159,23 @@ def updateProfile(request, username):
     user.username = request.data.get('username', user.username)
     user.email = request.data.get('email', user.email)
 
+
+
+    user.work = request.data.get('work', user.work)
+    user.gorcias = request.data.get('gorcias', user.gorcias)
+    if(request.data.get('work') == True): 
+        user.work = '1'
+        startVal = request.data.get('start')[:8]
+        finishVal = request.data.get('finish')[:8]
+        # print(startVal)
+        # print(type(startVal))
+        # print("pokkk")
+        user.at_work_from = startVal
+        user.at_work_to = finishVal
+    else : 
+        user.work = '0'
+
+    
     # update preferred topics
 
     preferred_topic_ids = request.data.get('preferred_topics', [])
@@ -256,6 +273,15 @@ def getCategoriesFromUserName(username):
 def getFeatured(request, username):
     input = username
     user = Profile.objects.filter(username=input).first()
+    if(user.gorcias):
+        prefs = Preference.objects.filter(profile = user).all()
+        print(prefs)
+        listUserClasses = [item.category.name for item in prefs]
+        print(listUserClasses)
+        print("ttt")
+    else :
+        listUserClasses = getCategoriesFromUserName(user.username) 
+
     q = QueryArticlesIter(
         keywords= '',
 
@@ -278,11 +304,14 @@ def getFeatured(request, username):
     classes = [item['predicted_class'] for item in vals]
     savedTexts = []
     i = 0    
-    listUserClasses = getCategoriesFromUserName(user.username) 
+    # listUserClasses = getCategoriesFromUserName(user.username) 
+    print(listUserClasses)
+    print("Before")
     listUserClasses = replace_element(listUserClasses, "Technology", "Sci/Tech")
     listUserClasses = replace_element(listUserClasses, "Careers", "Business")
     listUserClasses = replace_element(listUserClasses, "Brands", "World")
-
+    print(listUserClasses)
+    print("After")
     while (i< len(classes)):
         if(any(element in  listUserClasses for element in classes[i] )   ):
             savedTexts.append(listAr[i])
@@ -437,6 +466,10 @@ class saveGorcias(APIView):
     def post(self, request,username):
         data = request.data# Assuming the data is sent as 'data' parameter
         profil = Profile.objects.filter(username=username).first()
+        preferences = Preference.objects.filter(profile= profil).all()
+        for elem in preferences:
+            elem.delete()
+
         for elem in data : 
             if(elem["isChecked"]):
                 pref = Preference()
@@ -446,17 +479,19 @@ class saveGorcias(APIView):
                     elem['name'] = "Careers"
                 elif (elem['name'] == "World") : 
                     elem['name'] = "Brands"
-
-                cat = Category()
-                cat.name = elem['name']
+                cat = Category.objects.filter(name = elem['name'] ).first()
                 pref.category = cat
-
                 if(elem['atWork']):
                     pref.see_at_work = True
                 if(elem['Weekend']): 
                     pref.see_at_weekend = True
                 pref.profile = profil
-                pref.save()
+                pref.save() 
+
+
+
+
+               
     
 
 
