@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 from django.http import HttpResponse,JsonResponse
 from django.conf import settings
 from users.signals import updateFile as SignalUpdateProfils
+from .gorgias import queryGorgias
 
 from eventregistry import *
 
@@ -274,11 +275,18 @@ def getFeatured(request, username):
     input = username
     user = Profile.objects.filter(username=input).first()
     if(user.gorcias):
+        facts = user.preference_facts.split(',')
         prefs = Preference.objects.filter(profile = user).all()
         print(prefs)
-        listUserClasses = [item.category.name for item in prefs]
-        print(listUserClasses)
-        print("ttt")
+        print(facts)
+        listUserClassesFirst = [item.category.name for item in prefs]
+        listUserClasses = []
+        for elem in listUserClassesFirst :
+            res = queryGorgias(facts,query=elem.lower(),gorgias_file=f'newsfilter/{username}')
+            if (res["hasResult"]):
+                listUserClasses.append(elem)
+
+
     else :
         listUserClasses = getCategoriesFromUserName(user.username) 
 
@@ -305,18 +313,20 @@ def getFeatured(request, username):
     savedTexts = []
     i = 0    
     # listUserClasses = getCategoriesFromUserName(user.username) 
-    print(listUserClasses)
-    print("Before")
+
     listUserClasses = replace_element(listUserClasses, "Technology", "Sci/Tech")
     listUserClasses = replace_element(listUserClasses, "Careers", "Business")
     listUserClasses = replace_element(listUserClasses, "Brands", "World")
-    print(listUserClasses)
-    print("After")
+
     while (i< len(classes)):
         if(any(element in  listUserClasses for element in classes[i] )   ):
             savedTexts.append(listAr[i])
         i +=1
-    json_response = json.dumps(savedTexts, indent=4)
+    data = {
+        'savedTexts': savedTexts,
+        'topics': listUserClasses
+    }
+    json_response = json.dumps(data, indent=4)
     return Response(json_response)
 
 
@@ -481,6 +491,11 @@ class saveGorcias(APIView):
                     elem['name'] = "Brands"
                 cat = Category.objects.filter(name = elem['name'] ).first()
                 pref.category = cat
+                print(pref.category.name)
+                print("ubhibhbhbbhybvhbhjbhjghghjbhjhj")
+                print("ubhibhbhbbhybvhbhjbhjghghjbhjhj")
+                print("ubhibhbhbbhybvhbhjbhjghghjbhjhj")
+                print("ubhibhbhbbhybvhbhjbhjghghjbhjhj")
                 if(elem['atWork']):
                     pref.see_at_work = True
                 if(elem['Weekend']): 
@@ -488,12 +503,7 @@ class saveGorcias(APIView):
                 pref.profile = profil
                 pref.save() 
 
-
-
-
                
-    
-
 
 
     
