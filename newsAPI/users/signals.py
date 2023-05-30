@@ -88,7 +88,7 @@ def updateUser(sender, instance, created, **kwargs):
                     rule_actions[rule_name] = 'at_work'
                 elif corresponding.see_at_weekend is True and corresponding.see_at_work is False:
                     rule_actions[rule_name] = 'weekend'
-                elif corresponding.see_at_weekend is True and corresponding.see_at_work is True:
+                elif((corresponding.see_at_weekend is True and corresponding.see_at_work is True) or (corresponding.see_at_weekend is False and corresponding.see_at_work is False) ) : 
                     rule_actions[rule_name] = 'all_time'
 
             # generate default rules every set :- not_at-work
